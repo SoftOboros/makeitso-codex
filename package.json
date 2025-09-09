@@ -1,0 +1,34 @@
+{
+  "name": "makeitso-codex",
+  "version": "0.1.0",
+  "description": "A Picard\u2011style bridge command for your Codex engineering department: make it so.",
+  "bin": {
+    "mis": "dist/bin/mis.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node --compiler-options '{\"module\":\"commonjs\"}' bin/mis.ts",
+    "test": "node -e \"console.log('TODO: add tests')\"",
+    "e2e": "node -e \"console.log('TODO: add e2e tests')\"",
+    "lint": "node -e \"console.log('TODO: add linter')\"",
+    "audit": "npm audit || true"
+  },
+  "keywords": [
+    "codex",
+    "agent",
+    "orchestrator",
+    "engineering",
+    "regex",
+    "parser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,22 @@
+# Regex library for delimited parsing
+
+[[pattern]]
+name = "json_block"
+intent = "extract-json"
+regex = "<<MIS:JSON>>(.*?)<<MIS:END>>"
+multiline = true
+reflags = ["s"]
+
+[[pattern]]
+name = "error_block"
+intent = "extract-error"
+regex = "<<MIS:ERR>>(.*?)<<MIS:END>>"
+multiline = true
+reflags = ["s"]
+
+[[pattern]]
+name = "start_end_block"
+intent = "extract-block"
+regex = "<<MIS:START>>(.*?)<<MIS:END>>"
+multiline = true
+reflags = ["s"]
