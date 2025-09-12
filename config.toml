@@ -8,6 +8,8 @@ kind = "api:gpt-5-instant"   # or "codex"
 approval = "confirm-phase"   # "manual" | "confirm-phase" | "delegate"
 budget_tokens = 250000
 max_concurrency = 2
+api_key_env = "OPENAI_API_KEY"
+org_env = "OPENAI_ORG"
 
 [workers.codex]
 run_via = "cli"              # "cli" | "api"
@@ -29,3 +31,11 @@ mode = "shadow"
 regex_repo = "./protocol/regexes.toml"
 prompt_repo = "./protocol/prompts/"
 replay_dir = ".makeitso/replays"
+
+[monitor]
+enabled = true
+stall_timeout_ms = 120000
+dangerous_regexes = []
+
+[ui]
+open_url = "print"
