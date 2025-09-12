@@ -164,8 +164,8 @@ Global flags:
 
 ## Monitor and Remote Control
 
-- Enable `[monitor]` to detect stalls/danger and interrupt.
-- Enable `[remote_monitor]` for full‑duplex WS with optional HMAC (`x-mis-ts`/`x-mis-sig`).
+- Enable `[monitor]` to detect stalls/danger and interrupt. This is the default in config.
+- `[remote_monitor]` is planned to relay via SoftOboros infrastructure; an account will be required. Local monitor remains the default.
 - Remote commands examples (JSON over WS):
   - `{"type":"interrupt","reason":"operator stop"}`
   - `{"type":"danger","action":"add","pattern":"rm\s+-rf\s+./"}`

@@ -47,6 +47,9 @@ Behavior:
 - Emits telemetry events (run_start, phase, waits, interrupts, run_end) if enabled.
 - Manager notes appear in console; debug commands in notes (`DBG:{...}`) route to the active debug driver when enabled.
 
+Wizard mode:
+- If you start `mis` without arguments, it will guide you through entering a goal and choosing an action (run or plan).
+
 ## mis audit
 Summarizes recent activity from replays/artifacts and telemetry.
 
@@ -123,6 +126,9 @@ Responses:
 Drivers:
 - Node inspector (CDP over WebSocket): pause/resume/breakpoint/eval
 - DGDB (MI over TCP): pause/step/stack (early support)
+
+Remote relay (planned):
+- A remote monitor/relay will be available via SoftOboros (account required). Local monitor remains the default.
 
 ---
 

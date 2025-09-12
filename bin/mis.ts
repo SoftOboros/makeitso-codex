@@ -50,6 +50,11 @@ const CONFIG_PATH = path.resolve("config.toml");
 const PKG_ROOT = path.resolve(__dirname, "..", ".."); // dist/bin -> package root after build
 
 async function main() {
+  // Wizard mode: no command → guide user
+  if (!cmd) {
+    await wizard();
+    return;
+  }
   // Process codex key override if provided
   const codexKeyIdx = raw.findIndex((a) => a === "--codex-key");
   if (codexKeyIdx >= 0) {
@@ -243,6 +248,32 @@ async function audit() {
     console.log(`Latest run: ${when} — artifacts: ${latestArtifacts}${latestGoal ? ", goal: " + latestGoal : ""}`);
   }
   console.log(`Paths: replays=${replaysDir} artifacts=${artifactsDir}`);
+}
+
+
+
+/**
+ * Simple interactive wizard to guide through planning or running a goal.
+ */
+async function wizard() {
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q: string) => new Promise<string>((res) => rl.question(q, (a: string) => res(a)));
+  try {
+    console.log('Welcome to Make It So, Codex — wizard mode');
+    const g = (await ask('Enter your goal (e.g., "add eslint and fix ci"): ')).trim();
+    if (!g) { console.error('No goal entered. Exiting.'); rl.close(); return; }
+    const act = (await ask('Action [run/plan] (default: run): ')).trim().toLowerCase();
+    rl.close();
+    if (act === 'plan') {
+      await plan(g);
+    } else {
+      await run(g);
+    }
+  } catch (e: any) {
+    try { rl.close(); } catch {}
+    console.error(e?.message || e);
+    process.exit(1);
+  }
 }
 
 /** Placeholder learning pass. */
