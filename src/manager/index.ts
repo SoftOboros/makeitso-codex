@@ -7,6 +7,10 @@ import { Plan, ApprovalPolicy, ManagerKind, Task } from "../types";
 export interface ManagerContext {
   approval: ApprovalPolicy;
   budgetTokens: number;
+  /** Optional API key (e.g., for api:* manager kinds). */
+  apiKey?: string;
+  /** Optional organization/workspace identifier for API providers. */
+  org?: string;
 }
 
 /**

@@ -1,0 +1,35 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript build outputs
+dist/
+build/
+lib/
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Local env and OS cruft
+.env
+.env.local
+.envrc
+.DS_Store
+
+# Editor/project files
+.vscode/
+.idea/
+
+# Logs and caches
+logs/
+*.log
+*.log.*
+.cache/
+.tmp/
+
+# Project-specific
+.makeitso/

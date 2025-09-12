@@ -5,6 +5,8 @@
 
 import { Manager, ManagerContext } from "../index";
 import { Plan, Task } from "../../types";
+import { isAutoApprove, isAutoDeny, promptYesNo } from "../util";
+import { ConsoleLogger } from "../../console/logger";
 
 export class CodexManager implements Manager {
   constructor(private ctx: ManagerContext) {}
@@ -12,6 +14,7 @@ export class CodexManager implements Manager {
   /** @inheritdoc */
   async plan(goal: string): Promise<Plan> {
     // TODO: replace with Codex prompt call
+    ConsoleLogger.note(`Manager planning: allocating budget ${this.ctx.budgetTokens}`);
     return {
       id: `plan_${Date.now()}`,
       budgetTokens: this.ctx.budgetTokens,
@@ -29,8 +32,13 @@ export class CodexManager implements Manager {
   }
 
   /** @inheritdoc */
-  async approve(_plan: Plan, _task: Task, _phaseName: string): Promise<boolean> {
-    // Delegate by default; hook approval policy later
-    return this.ctx.approval !== "manual";
+  async approve(_plan: Plan, task: Task, phaseName: string): Promise<boolean> {
+    if (this.ctx.approval === "delegate") return true;
+    if (isAutoApprove()) return true;
+    if (isAutoDeny()) return false;
+    // For both manual and confirm-phase, prompt at phase boundaries
+    const q = `Approve phase '${phaseName}' for goal '${task.goal}'?`;
+    ConsoleLogger.note(q);
+    return await promptYesNo(q, true);
   }
 }
