@@ -54,7 +54,7 @@ export class BasicMonitor implements Monitor {
       /scp\s+.*@\d+\.\d+\.\d+\.\d+:/i,
       /nc\s+-e\s+/i,
       /openssl\s+enc\s+-aes/i,
-      /python\s+-c\s+['\"]import\s+os;\s*os\.system/i,
+      /python\s+-c\s+["']import\s+os;\s*os\.system/i,
     ];
     this.danger = [...builtIns, ...(opts.dangerousRegexes || [])];
   }
