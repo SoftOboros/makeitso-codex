@@ -53,6 +53,7 @@ jobs:
         if: steps.determine.outputs.should_publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN || secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "false"
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
           npm publish || echo "Publish failed; continuing as green per policy."
