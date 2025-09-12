@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Make It So, Codex</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; line-height: 1.5; margin: 0; padding: 0; color: #222; }
+      .hero { text-align: center; padding: 32px 16px; }
+      h1 { font-size: 40px; margin: 12px 0 4px; font-weight: 800; }
+      p.tagline { font-style: italic; color: #555; margin: 0; }
+      .content { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; }
+      pre { background: #f7f7f7; padding: 12px; border-radius: 6px; overflow-x: auto; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .section { margin-top: 28px; }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <img src="placeholder.png" alt="Make It So, Codex — A Picard‑style bridge command for your Codex engineering department." width="720" />
+      <h1><strong>Make It So, Codex</strong></h1>
+      
+    </div>
+    <div class="content">
+      <div class="section">
+        <h2>Quickstart</h2>
+        <pre><code># in this folder
+npm i
+npm run build
+npx mis init
+npx mis plan "fix failing tests in repo X"
+npx mis run "demo goal"</code></pre>
+      </div>
+      <div class="section">
+        <h2>Features</h2>
+        <ul>
+          <li>Orchestrator + Manager: plans and executes goals with approval policies.</li>
+          <li>Worker integration: CLI/API with delimited output capture and artifact parsing.</li>
+          <li>Monitor agent: detects stalls/danger and can interrupt safely.</li>
+          <li>Remote monitor: full‑duplex WS hook with control commands and optional HMAC.</li>
+          <li>Regex learning: coverage reporting, proposals, and gated approval.</li>
+          <li>Sandbox policies: gate shell/network/file writes (auto/ask/never).</li>
+          <li>Telemetry: structured JSONL events, audit summaries, durations/bytes.</li>
+          <li>Debug bridge: manager emits DBG:{...} routed to debugger drivers.</li>
+        </ul>
+      </div>
+      <div class="section">
+        <h2>CLI</h2>
+        <pre><code>mis init
+mis plan &lt;goal&gt;
+mis run &lt;goal&gt;
+mis audit
+mis learn
+mis approve &lt;file&gt;
+mis open &lt;url&gt;
+</code></pre>
+      </div>
+      <div class="section">
+        <h2>Debug Quickstart</h2>
+        <p>Enable <code>[debug]</code> in config and start your target with an inspector endpoint.</p>
+        <pre><code># override via CLI when needed
+mis --inspect-url ws://127.0.0.1:9229 run "goal"</code></pre>
+        <p>Send manager notes like:</p>
+        <pre><code>DBG:{"op":"pause"}
+DBG:{"op":"eval","args":{"expr":"2+2"}}
+DBG:{"op":"breakpoint","args":{"file":"src/foo.ts","line":42}}</code></pre>
+            </div>
+      <div class="section">
+        <h2>Contact</h2>
+        <p>Contact: <a href="mailto:ira@softoboros.com">ira@softoboros.com</a></p>
+      </div>
+    </div>
+  </body>
+  </html>

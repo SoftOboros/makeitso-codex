@@ -8,20 +8,34 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "ts-node --compiler-options '{\"module\":\"commonjs\"}' bin/mis.ts",
-    "test": "node -e \"console.log('TODO: add tests')\"",
+    "test": "npm run build && node dist/tests/run.js",
+    "pack:dry": "npm pack",
     "e2e": "node -e \"console.log('TODO: add e2e tests')\"",
-    "lint": "node -e \"console.log('TODO: add linter')\"",
+    "lint": "eslint . --ext .ts",
     "audit": "npm audit || true"
   },
   "keywords": [
-    "codex",
     "agent",
-    "orchestrator",
+    "agentic",
+    "automation",
+    "cli",
+    "codex",
+    "codex cli",
+    "debugger",
     "engineering",
+    "gdb",
+    "learning",
+    "manager",
+    "monitor",
+    "node inspector",
+    "orchestrator",
+    "parser",
     "regex",
-    "parser"
+    "sandbox",
+    "telemetry",
+    "typescript"
   ],
-  "author": "",
+  "author": "SoftOboros <ira@softoboros.com>",
   "license": "MIT",
   "dependencies": {
     "toml": "^3.0.0"
@@ -29,6 +43,45 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-header": "^3.1.1"
+  },
+  "readme": "README.md",
+  "homepage": "https://softoboros.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SoftOboros/makeitso-codex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SoftOboros/makeitso-codex/issues",
+    "email": "ira@softoboros.com"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "preferGlobal": true,
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist/",
+    "index.html"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "packageManager": "npm@10.0.0",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    }
   }
 }

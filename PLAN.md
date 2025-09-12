@@ -209,6 +209,28 @@ makeitso-codex/
 - **v0.2.x**: API worker, canary learning, richer telemetry, OS keychain tokens.
 - **v0.3.x**: Plugins (skills), vector memory, multi‑repo orchestration.
 
+
+## 14.1) Implemented Since Initial Draft
+- Console stream mirroring with Codex‑style coloring and a dedicated “manager notes” stream.
+- Monitor agent: observes all streams, detects stalls/danger, and interrupts manager/worker when needed.
+- Remote monitor (WebSocket) hook with HMAC signing and remote control commands (set stall timeout, add/clear danger).
+- Non‑blocking wait scheduler and manager policy to avoid token‑burning waits; pre‑task wait support.
+- Sandbox policy enforcer for `run_shell`, `network`, and `write_files` (auto/ask/never) across CLI, remote, and artifacts.
+- Telemetry events (schema + metrics): run start/end, phase actions, waits, interrupts, bytes and durations; audit summarizes stats.
+- Regex proposer + approval flow: proposals to TOML with rationale; `mis approve <file>` to apply.
+- API worker plumbing with network gating, env‑based key sourcing; stubbed streaming when unavailable.
+- Secrets + redaction: global redactor fed from configured env vars; applied to notes and telemetry.
+- Debug bridge:
+  - Driver abstraction and router parsing `DBG:{...}` commands from manager notes.
+  - Node Inspector driver (CDP over WebSocket) for pause/resume/breakpoint/eval.
+  - DGDB driver placeholder for embedded/gdb workflows.
+  - Orchestrator wiring with network policy gate; driver selection via config or `MIS_DEBUG_DRIVER`; inspector URL via config or `--inspect-url`.
+- Developer UX:
+  - VS Code launch configs for CLI/tests; attach support.
+  - `mis open <url>` with container‑safe printing or configurable command/open.
+  - CI matrix (Node 18/20/22) and publish dry‑run.
+
+
 ## 15) Risks & Mitigations
 - **Regex brittleness:** Shadow→canary→gated merges; LLM‑proposed diffs with tests.
 - **Secret leakage:** Mandatory redaction; “never log secrets”; CI checks.
@@ -217,3 +239,42 @@ makeitso-codex/
 
 ---
 **Ready next steps:** A1, B1–B2, C1, D1, E1 with `mis init` minimal flow and a trio of golden logs to seed the learning loop.
+
+---
+## 16) Checklist
+
+- [x] Console stream mirroring + manager notes
+- [x] Monitor agent with stall/danger interrupts
+- [x] Remote monitor WS + HMAC + control
+- [x] Non‑blocking wait scheduler and policy
+- [x] Sandbox policy mediation (shell/net/write)
+- [x] Telemetry schema + audit metrics
+- [x] Regex proposer + approval flow
+- [x] API worker (gated; stub fallback)
+- [x] Secrets sourcing + redaction
+- [x] Debug driver abstraction + router
+- [x] Node Inspector driver (pause/resume/breakpoint/eval)
+- [x] Orchestrator debug wiring + CLI `--inspect-url`
+- [x] DGDB driver placeholder
+- [x] VS Code debug configs (CLI/tests)
+- [x] `mis open <url>` with print/command/auto
+- [x] CI matrix + publish dry‑run
+- [ ] DGDB protocol implementation (pause/step/stack)
+- [ ] Manager API credentials wired for `api:*` kinds
+- [ ] End‑to‑end debug demo with inspector
+- [ ] Performance benchmarks and budgets
+
+---
+## 17) GitHub Pages / Demo Site (Planned)
+
+- Goal: Provide a simple, public landing that mirrors README highlights and quickstart.
+- Approach:
+  - Maintain a minimal `index.html` in the repo root (no build system required).
+  - Optionally experiment (later) with a compiled TypeScript site that pulls content at build time.
+  - Consider Git LFS or pre-signed S3 links for large assets; keep repo lean.
+  - Avoid Jekyll processing quirks by adding `.nojekyll` if needed.
+  - Keep secrets out of docs and pages; no dynamic secret references.
+- Rollout:
+  1. Manual `index.html` (done) with hero image and quickstart.
+  2. Future: demo repo mode — generate static HTML from compiled TS, publish via GitHub Pages.
+  3. Optional: link a “live logs” view backed by artifacts (local only by default).

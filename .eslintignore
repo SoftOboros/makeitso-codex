@@ -1,0 +1,4 @@
+dist/
+.makeitso/
+protocol/
+node_modules/
