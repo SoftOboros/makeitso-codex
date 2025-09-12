@@ -133,6 +133,9 @@ open_url_command = "curl -I"        # used when open_url = "command"
 
 ## CLI
 
+More detail on command workflow: [COMMANDS.md](./COMMANDS.md)
+
+
 ```bash
 mis init                          # scaffold config and protocol files
 mis plan <goal>                   # generate a plan (no execution)
