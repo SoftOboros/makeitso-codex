@@ -80,7 +80,7 @@ export class DgdbDriver implements DebugDriver {
 }
 
 function parseTcpEndpoint(ep: string): { host: string; port: number } {
-  let s = ep.replace(/^tcp:\/\//i, "");
+  const s = ep.replace(/^tcp:\/\//i, "");
   const parts = s.split(":");
   if (parts.length < 2) throw new Error("invalid tcp endpoint");
   const host = parts[0];

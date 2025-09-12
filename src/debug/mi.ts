@@ -11,7 +11,7 @@ export function parseMiFrames(resultLine: string) {
   for (let part of parts) {
     part = part.replace(/}\s*$/, "");
     const obj: Record<string, any> = {};
-    const rx = /(\w+)=\"([^\"]*)\"/g;
+    const rx = /(\w+)="([^"]*)"/g;
     let t: RegExpExecArray | null;
     while ((t = rx.exec(part)) !== null) {
       const k = t[1];

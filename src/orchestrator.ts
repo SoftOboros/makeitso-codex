@@ -9,8 +9,8 @@
 
 import { loadConfig, Config, MonitorConfig } from "./config";
 import { createManager } from "./manager";
-import { Plan, ApprovalPolicy, ManagerKind, Delimiters } from "./types";
-import { runCodexCLI, runCodexStub, runCodexStubStreaming, runCodexAPI } from "./worker/codexWorker";
+import { Plan, ManagerKind, Delimiters } from "./types";
+import { runCodexCLI, runCodexStubStreaming, runCodexAPI } from "./worker/codexWorker";
 import { parseWithPatterns } from "./parser";
 import { Pattern, loadPatternLibrary } from "./parser/regexEngine";
 import fs from "fs";
@@ -21,8 +21,7 @@ import { Waiter } from "./scheduler/waiter";
 import { Telemetry } from "./telemetry";
 import { Redactor, setGlobalRedactor } from "./secrets/redact";
 import { PolicyEnforcer } from "./policy/enforcer";
-import { NodeInspectorDriver } from "./debug/nodeInspector";
-import { DebugRouter, setGlobalDebugRouter } from "./debug/router";
+// debug drivers imported dynamically during runtime when enabled
 
 export interface OrchestratorOptions {
   configPath: string;

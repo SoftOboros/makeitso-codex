@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import { Pattern } from "../parser/regexEngine";
 
 export interface Proposal {

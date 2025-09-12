@@ -234,7 +234,7 @@ async function audit() {
       const avgDur = runs ? Math.round(totalDur / runs) : 0;
       const avgOut = runs ? Math.round(totalStdout / runs) : 0;
       console.log(`Events: runs=${runs} ok=${ok} aborted=${aborted} waits=${waits} (~${waitMs}ms) interrupts=${interrupts}`);
-      console.log(`Averages: duration≈${avgDur}ms stdout≈${avgOut}B`);
+      console.log(`Averages: duration≈${avgDur}ms stdout≈${avgOut}B stderr≈${avgErr}B`);
     }
   } catch {}
   if (latestTs) {
