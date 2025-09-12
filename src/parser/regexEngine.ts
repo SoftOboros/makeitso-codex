@@ -37,3 +37,22 @@ export function extract(text: string, pattern: Pattern): string[] {
   }
   return out;
 }
+
+/**
+ * Load a regex pattern library from a TOML file with [[pattern]] entries.
+ *
+ * @param filePath Path to TOML file (e.g., protocol/regexes.toml)
+ * @returns Array of Pattern entries
+ * @throws Error if file can't be read or parsed
+ */
+export function loadPatternLibrary(filePath: string): Pattern[] {
+  // Lazy import to avoid making this a hard dependency for all consumers
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require("fs");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const TOML: any = require("toml");
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const data = TOML.parse(raw);
+  const patterns: Pattern[] = Array.isArray(data.pattern) ? data.pattern : [];
+  return patterns;
+}
