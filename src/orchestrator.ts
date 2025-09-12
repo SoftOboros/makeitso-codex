@@ -217,7 +217,8 @@ export class Orchestrator {
     }
     if (!forceStub && mode === "cli" && (await enforcer.allowRunShell("invoke Codex CLI"))) {
       try {
-        const args = ["--goal", goal, "--emit-delimited", delims.start, delims.end];
+        // Pass goal as positional prompt; avoid unsupported flags in Codex CLI
+        const args = [goal];
         res = await runCodexCLI(args, delims, {
           onStdout: (c) => { ConsoleLogger.codexStdout(c); checkInterrupt(c, false); },
           onStderr: (c) => { ConsoleLogger.codexStderr(c); checkInterrupt(c, true); },
