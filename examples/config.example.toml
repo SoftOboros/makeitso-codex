@@ -13,6 +13,12 @@ max_concurrency = 2
 run_via = "cli"              # "cli" | "api"
 profile = "default"
 delimiters = { start = "<<MIS:START>>", end = "<<MIS:END>>", json = "<<MIS:JSON>>", err = "<<MIS:ERR>>" }
+# Optional execution tuning:
+# extra_args = ["-y", "--no-color"]   # flags passed before the goal
+# interactive = false                   # inherit stdin/stdout/stderr (true) or capture (false)
+# stdin_only = false                    # inherit only stdin; keep stdout/stderr captured
+# plain = true                          # request plain output from child (no color/spinner)
+# timeout_ms = 15000                    # warn when child is idle for this many ms
 
 [policies]
 write_files = "ask"

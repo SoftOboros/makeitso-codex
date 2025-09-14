@@ -27,6 +27,11 @@ export interface ManagerConfig {
   max_concurrency?: number;
   api_key_env?: string;   // e.g., OPENAI_API_KEY
   org_env?: string;       // e.g., OPENAI_ORG
+  max_iterations?: number; // optional: allow simple multi-round looping when manager suggests continue
+  max_no_progress?: number; // optional: stop or ask when progress stalls for N rounds
+  // Codex-as-Manager settings
+  codex_run_via?: "api" | "cli"; // planning via API (default) or local Codex CLI
+  codex_model?: string;           // model to use for API planning (e.g., gpt-4o-mini)
 }
 
 export interface WorkerCodexConfig {
@@ -36,6 +41,11 @@ export interface WorkerCodexConfig {
   api_endpoint?: string; // optional: Codex API base URL
   api_key_env?: string;  // optional: env var name for API key
   model?: string;        // optional: default model name
+  extra_args?: string[]; // optional: extra CLI args before the goal
+  interactive?: boolean; // optional: inherit stdio for child (for prompts)
+  plain?: boolean;       // optional: request plain output (no color/spinner)
+  timeout_ms?: number;   // optional: soft timeout for child inactivity
+  stdin_only?: boolean;  // optional: inherit only stdin (keep stdout/stderr captured)
 }
 
 export interface PoliciesConfig {
@@ -105,8 +115,8 @@ export function loadConfig(configPath: string): Config {
 function defaultConfig(): Config {
   return {
     project: { name: "default", root: "./", artifacts_dir: ".makeitso/artifacts" },
-    manager: { kind: "codex", approval: "delegate", budget_tokens: 250000, max_concurrency: 1 },
-    workers: { codex: { run_via: "api", profile: "default", delimiters: { start: "<<MIS:START>>", end: "<<MIS:END>>", json: "<<MIS:JSON>>", err: "<<MIS:ERR>>" } } },
+    manager: { kind: "codex", approval: "delegate", budget_tokens: 250000, max_concurrency: 1, max_iterations: 1, max_no_progress: 2, codex_run_via: "api", codex_model: "gpt-4o-mini" },
+    workers: { codex: { run_via: "api", profile: "default", delimiters: { start: "<<MIS:START>>", end: "<<MIS:END>>", json: "<<MIS:JSON>>", err: "<<MIS:ERR>>" }, extra_args: [], interactive: false, plain: false, timeout_ms: 60000, stdin_only: false } },
     policies: { write_files: "ask", run_shell: "ask", network: "ask" },
     telemetry: { enabled: true, redact: true, store: "local" },
     learning: { mode: "shadow", regex_repo: "./protocol/regexes.toml", prompt_repo: "./protocol/prompts/", replay_dir: ".makeitso/replays" },
@@ -167,8 +177,9 @@ function defaultDebugConfig(): DebugConfig {
 export interface UIConfig {
   open_url?: "auto" | "print" | "command";
   open_url_command?: string; // when open_url=="command", e.g., "curl -I"
+  profile?: "dev" | "debug" | "ci"; // optional runtime profile
 }
 
 function defaultUIConfig(): UIConfig {
-  return { open_url: "auto" };
+  return { open_url: "auto", profile: undefined };
 }

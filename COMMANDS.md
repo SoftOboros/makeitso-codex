@@ -36,9 +36,16 @@ Notes:
 ## mis run <goal>
 Runs the goal with the current configuration and policies.
 
-Example:
+Examples:
 ```bash
-npx mis run "wire debug driver and add tests"
+# Local debug (verbose, readable logs)
+npx mis --profile debug run "wire debug driver and add tests"
+
+# Non-interactive with child CLI flags (no TTY probes)
+npx mis --profile debug --child-args "-y --no-color --no-tty" run "update docs across modules"
+
+# CI-style unattended (auto-approve, bounded iterations)
+npx mis --dangerous-full-auto-self-driving-mode run "apply security patches and bump dependencies"
 ```
 
 Behavior:
@@ -49,6 +56,43 @@ Behavior:
 
 Wizard mode:
 - If you start `mis` without arguments, it will guide you through entering a goal and choosing an action (run or plan).
+
+## mis bootstrap <goal> [BASE.md]
+Seeds planning with BOOTSTRAP.md (or a custom base name) and then runs phases as normal.
+
+Examples:
+```bash
+npx mis bootstrap "Add scheme X to backend and frontend" BOOTSTRAP.md
+
+# Mobile companion app seed (iOS/Android)
+npx mis bootstrap "Bootstrap companion app UIs and API client" BOOTSTRAP.md
+
+# Write the generated plan file before running
+MIS_WRITE_PLAN=1 npx mis bootstrap "Refactor routing and add tests" BOOTSTRAP.md
+```
+
+Behavior:
+- Reads the bootstrap doc and includes it in the manager’s planning prompt, alongside a truncated repository summary and recent thread summary.
+- Prints the generated plan JSON before approvals.
+- Continues with phases under your approval and profile settings.
+
+## mis profile
+Shows the active runtime profile and effective settings used for the current environment.
+
+Example:
+```bash
+npx mis profile
+```
+
+Output:
+```
+Active profile: dev
+Workers.codex: stdin_only=on, interactive=off, plain=on, timeout_ms=15000
+Logging: verbose=off, inplace=off
+```
+
+Notes:
+- Profile selection order: `--profile` → `[ui].profile` → auto (CI→ci, debugger/verbose→debug, else dev).
 
 ## mis audit
 Summarizes recent activity from replays/artifacts and telemetry.
@@ -136,3 +180,60 @@ Remote relay (planned):
 - Policies gate shell, network, and writes with `auto`, `ask`, or `never`.
 - Telemetry stores JSONL events in `.makeitso/telemetry/` and is summarized by `mis audit`.
 
+---
+
+## Profiles and Global Flags
+
+Profiles set defaults for child I/O and logging:
+
+- `dev`: stdin_only=on, interactive=off, plain=on, timeout≈15s
+- `debug`: same as dev + verbose diagnostics
+- `ci`: stdin_only=off, interactive=off, plain=on, timeout≈60s
+
+Global flags:
+- `--profile dev|debug|ci`: select runtime profile (overrides `[ui].profile`)
+- `--non-interactive`/`-y`: auto-approve where allowed
+- `--force-stub`: force stubbed Codex worker
+- `--inspect-url <ws://..>`: override debug inspector endpoint
+- `--codex-key <token>`: set env for `workers.codex.api_key_env` (fallback `CODEX_API_KEY`)
+- `--child-arg <tok>` / `--child-args "..."`: extra flags for the child CLI before the goal (e.g., `-y --no-color`)
+- `--dangerous-full-auto-self-driving-mode`: CI-like full auto (auto-approve, CI profile, bounded auto-iterations)
+- `--write-plan`: write generated plan JSON to `.makeitso/plan_<timestamp>.json` (applies to plan, plan-bootstrap, and run)
+
+### Real‑world examples
+
+```bash
+# 1) Full auto on CI: end-to-end with guardrails
+OPENAI_API_KEY=sk-... \
+mis --dangerous-full-auto-self-driving-mode \
+    --cwd /srv/repo \
+    run "Create a plan and execute to incorporate scheme X into backend and frontend, wire them together, and create tests"
+
+# 2) Interactive local debugging: child gets a real TTY (best for CLIs with spinners/DSR)
+MIS_CHILD_INTERACTIVE=1 \
+mis --profile debug --cwd ~/code/repo \
+    run "Investigate failing integration tests and fix mocks"
+
+# 3) Non-interactive local debugging: clean logs, captured output
+mis --profile debug --child-args "-y --no-color --no-tty" --cwd ~/code/repo \
+    run "Update docs, regenerate API clients, and lint"
+
+# 4) Plan-only bootstrap preview, then commit plan to artifacts
+MIS_WRITE_PLAN=1 \
+mis plan-bootstrap "Bootstrap companion apps and align terminology" BOOTSTRAP.md
+```
+
+## mis plan-bootstrap <goal> [BASE.md]
+Seeds planning from a bootstrap doc and prints the plan JSON without executing phases.
+
+Examples:
+```bash
+npx mis plan-bootstrap "Add scheme X to backend and frontend" BOOTSTRAP.md
+
+# Plan-only preview for a frontend build-out
+MIS_WRITE_PLAN=1 npx mis plan-bootstrap "Create SwiftUI/Compose companions using existing API" FRONTEND_BOOTSTRAP.md
+```
+
+Behavior:
+- Reads the bootstrap doc, repository summary, and recent thread summary into the planning prompt.
+- Prints the generated plan JSON. Combine with `--write-plan` to persist.

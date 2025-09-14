@@ -11,6 +11,10 @@ export interface ManagerContext {
   apiKey?: string;
   /** Optional organization/workspace identifier for API providers. */
   org?: string;
+  /** Codex-as-Manager: run planning via 'api' (default) or 'cli'. */
+  codexRunVia?: "api" | "cli";
+  /** Codex-as-Manager model for API planning. */
+  codexModel?: string;
 }
 
 /**
@@ -34,6 +38,34 @@ export interface Manager {
    * @returns boolean approval
    */
   approve(plan: Plan, task: Task, phaseName: string): Promise<boolean>;
+
+  /**
+   * Optional usage summary for API-based managers.
+   * Implementations may return token counts (prompt/completion/total) and model info.
+   */
+  usage?(): Promise<{ prompt?: number; completion?: number; total?: number; model?: string }>;
+
+  /**
+   * Review worker output and decide next step.
+   * Returns a decision indicating whether the goal appears complete, needs another round,
+   * or should abort; may include refined instructions for the next round.
+   */
+  review(input: ReviewInput): Promise<ManagerDecision>;
+}
+
+/** Minimal structure passed to Manager.review. */
+export interface ReviewInput {
+  goal: string;
+  stdout: string;
+  stderr: string;
+  artifacts: { json: string[]; blocks?: string[] };
+}
+
+export interface ManagerDecision {
+  status: "done" | "continue" | "abort" | "need_input" | "stuck";
+  reason?: string;
+  nextGoal?: string;         // optional refined or follow-up goal
+  instructions?: string;     // concrete guidance for the next round
 }
 
 /**
