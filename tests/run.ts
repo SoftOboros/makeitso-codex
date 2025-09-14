@@ -8,6 +8,12 @@ import { run as runMi } from "./mi.test";
 import { run as runDebugRouter } from "./debugRouter.test";
 
 async function main() {
+  // Ensure a fully non-interactive, deterministic environment for CI
+  process.env.MIS_NO_STALL_TICK = process.env.MIS_NO_STALL_TICK || "1";
+  process.env.MIS_DISABLE_MANAGER_API = process.env.MIS_DISABLE_MANAGER_API || "1";
+  process.env.MIS_CHILD_PLAIN = process.env.MIS_CHILD_PLAIN || "1";
+  process.env.MIS_PROFILE = process.env.MIS_PROFILE || "ci";
+  process.env.MIS_LOG_STRIP_ANSI = process.env.MIS_LOG_STRIP_ANSI || "1";
   let failures = 0;
   const cases: Array<[string, () => void | Promise<void>]> = [
     ["parser", runParser],

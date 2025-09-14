@@ -15,6 +15,11 @@ org_env = "OPENAI_ORG"
 run_via = "cli"              # "cli" | "api"
 profile = "default"
 delimiters = { start = "<<MIS:START>>", end = "<<MIS:END>>", json = "<<MIS:JSON>>", err = "<<MIS:ERR>>" }
+interactive = false
+stdin_only = true
+plain = true
+# extra_args = ["-y"]
+# timeout_ms = 15000
 
 [policies]
 write_files = "ask"

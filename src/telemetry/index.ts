@@ -23,7 +23,12 @@ export type TelemetryEvent = {
     | "phase"
     | "wait_start"
     | "wait_end"
-    | "interrupt";
+    | "interrupt"
+    // Informational annotations
+    | "note"
+    // Manager-specific annotations
+    | "manager_decision"
+    | "manager_usage";
   ts: number;
   data: Record<string, any>;
 };

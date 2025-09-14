@@ -139,11 +139,14 @@ More detail on command workflow: [COMMANDS.md](./COMMANDS.md)
 ```bash
 mis init                          # scaffold config and protocol files
 mis plan <goal>                   # generate a plan (no execution)
+mis plan-bootstrap <goal> [BASE.md] # seed planning and print JSON only (no execution)
+mis bootstrap <goal> [BASE.md]    # seed planning from BOOTSTRAP.md (or custom), then run
 mis run <goal>                    # execute with current approval policy
 mis audit                         # summarize telemetry and artifacts
 mis learn                         # coverage + proposal generation
 mis approve <file>                # apply proposal (e.g., regex TOML)
 mis open <url>                    # open/print URL per config/ui policy
+mis profile                       # show active profile and effective settings
 ```
 
 Global flags:
@@ -151,6 +154,46 @@ Global flags:
 - `--force-stub`: force stubbed Codex worker
 - `--inspect-url <ws://..>`: override debug inspector URL (sets `MIS_INSPECT_URL`)
 - `--codex-key <token>`: set env for `workers.codex.api_key_env` (fallback `CODEX_API_KEY`)
+- `--profile dev|debug|ci`: select runtime profile (overrides `[ui].profile`)
+- `--child-arg <tok>` / `--child-args "..."`: pass extra flags to the child CLI before the goal (e.g., `-y --no-color`)
+- `--dangerous-full-auto-self-driving-mode`: playful but real — enables CI-like full auto: auto-approve prompts, CI profile, bounded auto-iterations (10)
+- `--write-plan`: write generated plan JSON to `.makeitso/plan_<timestamp>.json` (applies to plan, plan-bootstrap, and run)
+
+Bootstrap seeding
+- `mis bootstrap <goal> [BASE.md]` reads BOOTSTRAP.md (or the provided base name) and seeds the manager’s planning prompt with it, along with a truncated repository and recent thread summary. The generated plan is displayed before approvals and subsequent phases run as normal (subject to your approval policy and profile).
+- `mis plan-bootstrap <goal> [BASE.md]` behaves the same but only prints the plan JSON; it does not execute phases. Combine with `--write-plan` to persist.
+
+## Profiles
+
+Avoid juggling many flags by using profiles. A profile sets sensible defaults for child I/O, logging, and timeouts.
+
+- dev: stdin_only=on, interactive=off, plain=on, timeout≈15s, readable logs.
+- debug: dev + verbose diagnostics; ideal for stepping and pausing.
+- ci: stdin_only=off, interactive=off, plain=on, timeout≈60s; deterministic.
+
+Selection order: `--profile` flag → `config.toml [ui].profile` → auto (CI→ci, debugger/verbose→debug, else dev).
+
+Examples:
+
+- CLI: `mis --profile dev run "Update docs"`
+- Show active profile: `mis profile`
+- In config.toml:
+
+```
+[ui]
+profile = "dev"  # or "debug" | "ci"
+```
+
+Worker tuning in config.toml (advanced; usually set by profile):
+
+```
+[workers.codex]
+stdin_only = true   # inherit only stdin; keep stdout/stderr captured
+interactive = false # inherit full stdio when true (bypass capture)
+plain = true        # request plain output (no color/spinners)
+# extra_args = ["-y"]
+# timeout_ms = 15000
+```
 
 ## Debug Quickstart
 
@@ -203,10 +246,11 @@ Global flags:
 ## VS Code Debugging
 
 - See `.vscode/launch.json`:
-  - "CLI: mis (ts-node)" (edit args, e.g., ["run","demo goal"]).
-  - "CLI: mis (dist)" and "Tests: run suite (dist)" (auto builds first).
-  - "Attach: Node process" to attach to an inspector‑enabled node.
-  - Optional "NPM: test (debug)" configuration to break on test startup.
+  - "Launch: mis (ts-node) — interactive debug" (gives the child a real TTY; best for CLIs that probe the terminal).
+  - "Launch: mis (ts-node) — non-interactive debug" (passes child flags like `-y --no-color --no-tty` to suppress prompts/TTY usage).
+  - "Launch: mis (ts-node) — debug verbose" (maximum readable diagnostics with clean logs).
+  - "Launch: mis (dist)" and "Launch: mis (dist) — no debug".
+  - "Attach: Node (9229)" or "Attach: Pick Node Process" to attach to an inspector‑enabled node.
 
 ## Contact
 

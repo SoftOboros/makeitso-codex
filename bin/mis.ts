@@ -19,14 +19,66 @@
 
 import fs from "fs";
 import path from "path";
+import { chdir } from "process";
 // Defer loading heavy modules (and deps like 'toml') to commands that need them
 
-// Parse global flags first to support non-interactive mode regardless of command position
+// Raw argv (excluding node and script)
 const raw = process.argv.slice(2);
-const flags = raw.filter((a) => a.startsWith("-"));
-const args = raw.filter((a) => !a.startsWith("-"));
-const cmd = args[0];
-const rest = args.slice(1);
+
+// Resolve package root regardless of ts-node vs compiled dist
+function resolvePackageRoot(): string {
+  const candidates = [
+    path.resolve(__dirname, "..", ".."), // dist/bin -> package root
+    path.resolve(__dirname, ".."),        // bin -> package root (ts-node)
+  ];
+  for (const p of candidates) {
+    try {
+      const pkg = path.join(p, "package.json");
+      if (fs.existsSync(pkg)) return p;
+    } catch {}
+  }
+  // Fallback: current working directory
+  return process.cwd();
+}
+
+// Optional working directory override: --cwd=<path> or --cwd <path>
+// Parse from raw directly so we can chdir before any file I/O
+const rawFlags = raw.filter((a) => a.startsWith("-"));
+const cwdFlag = rawFlags.find((f) => f === "--cwd" || f.startsWith("--cwd="));
+if (cwdFlag) {
+  const eqVal = cwdFlag.includes("=") ? cwdFlag.split("=", 2)[1] : undefined;
+  const idx = raw.indexOf(cwdFlag);
+  const nextVal = raw[idx + 1] && !raw[idx + 1].startsWith("-") ? raw[idx + 1] : undefined;
+  const target = path.resolve(eqVal || nextVal || ".");
+  try { chdir(target); }
+  catch (e: any) { console.error(`Failed to chdir to --cwd ${target}: ${e?.message || e}`); process.exit(2); }
+} else {
+  // Default: run as if cwd = project root
+  const pkgRoot = resolvePackageRoot();
+  try { chdir(pkgRoot); } catch {}
+}
+
+// Now split args carefully, skipping values that belong to known flags
+const valueFlags = new Set(["--cwd", "--inspect-url", "--codex-key", "--profile", "--child-arg", "--child-args"]);
+valueFlags.add("--profile");
+const flags: string[] = [];
+const positional: string[] = [];
+for (let i = 0; i < raw.length; i++) {
+  const tok = raw[i];
+  if (tok.startsWith("-")) {
+    flags.push(tok);
+    const name = tok.includes("=") ? tok.split("=", 2)[0] : tok;
+    const hasEq = tok.includes("=");
+    if (valueFlags.has(name) && !hasEq) {
+      const next = raw[i + 1];
+      if (next && !next.startsWith("-")) i++; // skip value token
+    }
+  } else {
+    positional.push(tok);
+  }
+}
+const cmd = positional[0];
+const rest = positional.slice(1);
 
 // Global flags
 if (flags.includes("--non-interactive") || flags.includes("-y")) {
@@ -34,6 +86,10 @@ if (flags.includes("--non-interactive") || flags.includes("-y")) {
 }
 if (flags.includes("--force-stub")) {
   process.env.MIS_FORCE_STUB = process.env.MIS_FORCE_STUB || "1";
+}
+// Verbose logging flag: enable debug logs across the process
+if (flags.includes("--verbose") || flags.includes("-v")) {
+  process.env.MIS_VERBOSE = "1";
 }
 // Debug inspector URL override: --inspect-url=<ws://...> or --inspect-url <ws://...>
 const inspectFlag = flags.find((f) => f.startsWith("--inspect-url"));
@@ -46,8 +102,51 @@ if (inspectFlag) {
   }
 }
 
+// Runtime profile: --profile dev|debug|ci
+const profileFlag = flags.find((f) => f.startsWith("--profile"));
+if (profileFlag) {
+  const eq = profileFlag.split("=", 2)[1];
+  const nextIdx = raw.indexOf(profileFlag) + 1;
+  const val = (eq || raw[nextIdx] || "").toLowerCase();
+  if (val && !val.startsWith("-")) {
+    process.env.MIS_PROFILE = val;
+  }
+}
+
+// Convenience: --dangerous-full-auto-self-driving-mode (playful but real)
+if (flags.includes("--dangerous-full-auto-self-driving-mode")) {
+  // Approvals auto, pick CI-like defaults, and signal orchestrator to remove iteration friction
+  process.env.MIS_FULL_AUTO = "1";
+  process.env.MIS_AUTO_APPROVE = "1";
+  if (!process.env.MIS_PROFILE) process.env.MIS_PROFILE = "ci";
+}
+
+// Child args: --child-arg <token> (repeatable) and/or --child-args "-y --no-color"
+const childArgs: string[] = [];
+for (let i = 0; i < raw.length; i++) {
+  const t = raw[i];
+  if (t === "--child-arg") {
+    const v = raw[i + 1];
+    if (v && !v.startsWith("-")) { childArgs.push(v); i++; }
+  } else if (t.startsWith("--child-arg=")) {
+    const v = t.split("=", 2)[1];
+    if (v) childArgs.push(v);
+  } else if (t === "--child-args") {
+    const v = raw[i + 1];
+    if (v && !v.startsWith("-")) { childArgs.push(...v.split(/\s+/).filter(Boolean)); i++; }
+  } else if (t.startsWith("--child-args=")) {
+    const v = t.split("=", 2)[1];
+    if (v) childArgs.push(...v.split(/\s+/).filter(Boolean));
+  }
+}
+if (childArgs.length) {
+  process.env.MIS_CHILD_ARGS = JSON.stringify(childArgs);
+}
+
+// (legacy --bootstrap flag removed; use `mis bootstrap <goal> [BASE.md]` instead)
+
 const CONFIG_PATH = path.resolve("config.toml");
-const PKG_ROOT = path.resolve(__dirname, "..", ".."); // dist/bin -> package root after build
+const PKG_ROOT = resolvePackageRoot(); // package root after build or ts-node
 
 async function main() {
   // Wizard mode: no command → guide user
@@ -74,6 +173,12 @@ async function main() {
   switch (cmd) {
     case "init":
       return init();
+    case "bootstrap":
+      return bootstrap(rest[0], rest[1]);
+    case "plan-bootstrap":
+      return planBootstrap(rest[0], rest[1]);
+    case "profile":
+      return showProfile();
     case "plan":
       return plan(rest.join(" ").trim());
     case "run":
@@ -88,9 +193,12 @@ async function main() {
       return approve(rest[0]);
     default:
   console.log(`Usage:
-  mis [--non-interactive|-y] [--force-stub] init
-  mis [--non-interactive|-y] [--force-stub] plan <goal>
-  mis [--non-interactive|-y] [--force-stub] run <goal>
+  mis [--cwd <dir>] [--profile dev|debug|ci] [--dangerous-full-auto-self-driving-mode] [--verbose|-v] [--non-interactive|-y] [--force-stub] init
+  mis profile
+  mis bootstrap <goal> [BASE.md]
+  mis plan-bootstrap <goal> [BASE.md]
+  mis [--cwd <dir>] [--profile dev|debug|ci] [--dangerous-full-auto-self-driving-mode] [--child-arg <tok> ...] [--child-args "..."] [--verbose|-v] [--non-interactive|-y] [--force-stub] plan <goal>
+  mis [--cwd <dir>] [--profile dev|debug|ci] [--dangerous-full-auto-self-driving-mode] [--child-arg <tok> ...] [--child-args "..."] [--verbose|-v] [--non-interactive|-y] [--force-stub] run <goal>
   mis open <url>
   mis audit
   mis learn`);
@@ -140,6 +248,72 @@ async function plan(goal: string) {
   const orch = new Orchestrator({ configPath: CONFIG_PATH });
   const p = await orch.plan(goal);
   console.log(JSON.stringify(p, null, 2));
+  // Optional: write plan to file
+  if (process.env.MIS_WRITE_PLAN === '1') {
+    try {
+      fs.mkdirSync('.makeitso', { recursive: true });
+      const ts = Date.now();
+      fs.writeFileSync(`.makeitso/plan_${ts}.json`, JSON.stringify(p, null, 2));
+      console.log(`Wrote .makeitso/plan_${ts}.json`);
+    } catch {}
+  }
+}
+
+/** Show the active runtime profile and effective settings. */
+async function showProfile() {
+  const { loadConfig } = await import("../src/config");
+  const cfg = loadConfig(CONFIG_PATH);
+  const profile = pickProfile(cfg.ui?.profile);
+  const eff = effectiveSettings(profile, cfg);
+  const lines = [
+    `Active profile: ${profile}`,
+    `Workers.codex: stdin_only=${eff.stdin_only ? 'on' : 'off'}, interactive=${eff.interactive ? 'on' : 'off'}, plain=${eff.plain ? 'on' : 'off'}, timeout_ms=${eff.timeout_ms}`,
+    `Logging: verbose=${eff.verbose ? 'on' : 'off'}, inplace=${eff.inplace ? 'on' : 'off'}`,
+  ];
+  console.log(lines.join("\n"));
+}
+
+function pickProfile(cfgProfile?: string): "dev" | "debug" | "ci" {
+  const p = (process.env.MIS_PROFILE || cfgProfile || "").toLowerCase();
+  if (p === "dev" || p === "debug" || p === "ci") return p as any;
+  const isCI = process.env.CI === "1" || /true/i.test(process.env.CI || "");
+  let inspector = false;
+  try { const ins = require("inspector"); inspector = !!ins?.url?.(); } catch {}
+  if (!inspector && Array.isArray(process.execArgv)) inspector = process.execArgv.some((a) => a.startsWith("--inspect"));
+  if (!inspector && process.env.VSCODE_INSPECTOR_OPTIONS) inspector = true;
+  return (isCI ? "ci" : ((inspector || process.env.MIS_VERBOSE === "1") ? "debug" : "dev"));
+}
+
+function effectiveSettings(profile: "dev" | "debug" | "ci", cfg: any) {
+  const w = cfg?.workers?.codex || {};
+  if (profile === "dev") {
+    return {
+      stdin_only: w.stdin_only !== false,
+      interactive: false,
+      plain: true,
+      timeout_ms: w.timeout_ms || 15000,
+      verbose: process.env.MIS_VERBOSE === "1",
+      inplace: false,
+    };
+  } else if (profile === "debug") {
+    return {
+      stdin_only: true,
+      interactive: false,
+      plain: true,
+      timeout_ms: w.timeout_ms || 15000,
+      verbose: true,
+      inplace: false,
+    };
+  } else {
+    return {
+      stdin_only: false,
+      interactive: false,
+      plain: true,
+      timeout_ms: w.timeout_ms || 60000,
+      verbose: false,
+      inplace: false,
+    };
+  }
 }
 
 /** Execute a goal using the configured approval policy. */
@@ -152,6 +326,40 @@ async function run(goal: string) {
   const orch = new Orchestrator({ configPath: CONFIG_PATH });
   const code = await orch.run(goal);
   process.exit(code);
+}
+
+/** Seed planning from a bootstrap doc and then run phases as normal. */
+async function bootstrap(goal?: string, baseName?: string) {
+  if (!goal) {
+    console.error("Bootstrap requires a <goal>.");
+    process.exit(2);
+  }
+  (process.env as any).MIS_BOOTSTRAP = baseName && !baseName.startsWith('-') ? baseName : (process.env.MIS_BOOTSTRAP || 'BOOTSTRAP.md');
+  const { Orchestrator } = await import("../src/orchestrator");
+  const orch = new Orchestrator({ configPath: CONFIG_PATH });
+  const code = await orch.run(goal);
+  process.exit(code);
+}
+
+/** Plan-only bootstrap: seed planning from a bootstrap doc and print JSON (no execution). */
+async function planBootstrap(goal?: string, baseName?: string) {
+  if (!goal) {
+    console.error("Plan-bootstrap requires a <goal>.");
+    process.exit(2);
+  }
+  (process.env as any).MIS_BOOTSTRAP = baseName && !baseName.startsWith('-') ? baseName : (process.env.MIS_BOOTSTRAP || 'BOOTSTRAP.md');
+  const { Orchestrator } = await import("../src/orchestrator");
+  const orch = new Orchestrator({ configPath: CONFIG_PATH });
+  const p = await orch.plan(goal);
+  console.log(JSON.stringify(p, null, 2));
+  if (process.env.MIS_WRITE_PLAN === '1') {
+    try {
+      fs.mkdirSync('.makeitso', { recursive: true });
+      const ts = Date.now();
+      fs.writeFileSync(`.makeitso/plan_${ts}.json`, JSON.stringify(p, null, 2));
+      console.log(`Wrote .makeitso/plan_${ts}.json`);
+    } catch {}
+  }
 }
 
 /** Placeholder audit output. */
