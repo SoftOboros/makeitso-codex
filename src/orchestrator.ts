@@ -222,17 +222,20 @@ export class Orchestrator {
     try { process.on("SIGTERM", onSignal); } catch {}
     let stdoutBytes = 0;
     let stderrBytes = 0;
+    let interruptedByMonitor = false;
     const checkInterrupt = (chunk: string | Buffer, isErr = false) => {
       const text = typeof chunk === "string" ? chunk : chunk.toString("utf-8");
       monitor?.onEvent({ type: isErr ? "stderr" : "stdout", data: text, timestamp: Date.now() });
       remote?.onEvent({ type: isErr ? "stderr" : "stdout", data: text, timestamp: Date.now() });
       if (isErr) stderrBytes += Buffer.byteLength(text); else stdoutBytes += Buffer.byteLength(text);
-      if (monitor?.shouldInterrupt()) {
+      if (monitor?.shouldInterrupt() && !interruptedByMonitor) {
+        interruptedByMonitor = true;
         ConsoleLogger.monitor(`Interrupt requested: ${monitor.reason()}`);
         telemetry.record({ type: "interrupt", ts: Date.now(), data: { source: "monitor", reason: monitor.reason() } });
         try { (controller as any).abort(); } catch {}
       }
-      if (remote?.shouldInterrupt()) {
+      if (remote?.shouldInterrupt() && !interruptedByMonitor) {
+        interruptedByMonitor = true;
         ConsoleLogger.monitor(`Remote interrupt: ${remote.reason()}`);
         telemetry.record({ type: "interrupt", ts: Date.now(), data: { source: "remote", reason: remote.reason() } });
         try { (controller as any).abort(); } catch {}
@@ -264,12 +267,16 @@ export class Orchestrator {
       ConsoleLogger.debug("stall watchdog disabled (inspector active or MIS_NO_STALL_TICK=1)");
     } else {
       stallTicker = setInterval(() => {
+        if (interruptedByMonitor) { try { clearInterval(stallTicker as any); } catch {} return; }
         try {
           monitor.onEvent({ type: "command", data: "tick", timestamp: Date.now() });
-          if (monitor.shouldInterrupt()) {
+          if (monitor.shouldInterrupt() && !interruptedByMonitor) {
+            interruptedByMonitor = true;
             ConsoleLogger.monitor(`Interrupt requested: ${monitor.reason()}`);
             telemetry.record({ type: "interrupt", ts: Date.now(), data: { source: "monitor", reason: monitor.reason() } });
             try { (controller as any).abort(); } catch {}
+            // stop ticking after first interrupt
+            try { clearInterval(stallTicker as any); } catch {}
           }
         } catch {}
       }, 1000);
@@ -395,6 +402,10 @@ export class Orchestrator {
             fs.writeFileSync(`${sessionDir}/session_${ts}.json`, JSON.stringify(snapshot, null, 2));
           }
         } catch {}
+        // If monitor already requested interrupt, do not continue into further rounds
+        if (interruptedByMonitor) {
+          return 2;
+        }
         // Track simple progress heuristic across rounds
         (this as any)._iterCount = ((this as any)._iterCount ?? 0) + 1;
         const maxIter = Number((this.cfg.manager as any).max_iterations || 1);
@@ -424,14 +435,19 @@ export class Orchestrator {
           // Guardrails: hard iteration cap (0 means unlimited), and no-progress cap
           const iter = (this as any)._iterCount as number;
           const noProg = (this as any)._noProg as number;
+          const auto = process.env.MIS_AUTO_APPROVE === '1';
           if (maxIter > 0 && iter >= maxIter) {
-            const ok = await promptYesNo(`Reached max iterations (${maxIter}). Continue anyway?`, true);
-            if (!ok) return res.code;
-            (this as any)._iterCount = 0; // reset after manual allowance
+            if (!auto) {
+              const ok = await promptYesNo(`Reached max iterations (${maxIter}). Continue anyway?`, true);
+              if (!ok) return res.code;
+            }
+            (this as any)._iterCount = 0; // reset after allowance
           }
           if (noProg >= maxNoProg) {
-            const ok = await promptYesNo(`No progress detected for ${noProg} rounds. Continue anyway?`, true);
-            if (!ok) return res.code;
+            if (!auto) {
+              const ok = await promptYesNo(`No progress detected for ${noProg} rounds. Continue anyway?`, true);
+              if (!ok) return res.code;
+            }
             (this as any)._noProg = 0;
           }
           const nextGoal = decision.nextGoal || (decision.instructions ? `${goal}\n\nFollow-up: ${decision.instructions}` : goal);

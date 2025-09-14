@@ -41,8 +41,10 @@ const LOG_MAX_LINE_LEN = Math.max(0, Number(process.env.MIS_LOG_MAX_LINE_LEN || 
 
 function stripAnsi(text: string): string {
   // CSI sequences: ESC [ ... cmd
+  // eslint-disable-next-line no-control-regex, no-useless-escape
   const CSI = /\u001b\[[0-?]*[ -\/]*[@-~]/g;
   // OSC sequences: ESC ] ... BEL or ST
+  // eslint-disable-next-line no-control-regex
   const OSC = /\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
   // Other escapes (save/restore cursor, etc.) are relatively harmless to leave
   return text.replace(CSI, "").replace(OSC, "");
@@ -119,7 +121,7 @@ export const ConsoleLogger = {
     const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     const lines = normalized.split("\n");
     for (let i = 0; i < lines.length; i++) {
-      let line = sanitizeLine(lines[i]);
+      const line = sanitizeLine(lines[i]);
       const isLast = i === lines.length - 1;
       const hadTerminator = /\r|\n$/.test(text);
       if (isLast && !hadTerminator && line.length === 0) continue;
@@ -159,7 +161,7 @@ export const ConsoleLogger = {
     const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     const lines = normalized.split("\n");
     for (let i = 0; i < lines.length; i++) {
-      let line = sanitizeLine(lines[i]);
+      const line = sanitizeLine(lines[i]);
       const isLast = i === lines.length - 1;
       const hadTerminator = /\r|\n$/.test(text);
       if (isLast && !hadTerminator && line.length === 0) continue;

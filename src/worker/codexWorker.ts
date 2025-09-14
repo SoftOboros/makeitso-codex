@@ -104,6 +104,7 @@ export function runCodexCLI(
         cb.onStdout?.(chunk);
         if (!interactive && !inheritStdinOnly && wantAutoDSR && !dsrTriggered) {
           const s = chunk.toString("utf-8");
+          // eslint-disable-next-line no-control-regex
           if (/\x1b\[6n/.test(s)) {
             dsrTriggered = true;
             ConsoleLogger.monitor("Detected terminal probe (DSR: ESC[6n) from child; switching to interactive mode for this run.");
@@ -192,7 +193,7 @@ export function runCodexCLI(
       try { proc.kill("SIGTERM"); } catch {}
       // Give the child a brief moment; then force exit path
       const t = setTimeout(() => settle(130), 1500);
-      proc.once("close", () => { try { clearTimeout(t); } catch {}; settle(130); });
+      proc.once("close", () => { try { clearTimeout(t); } catch {} settle(130); });
     };
     try { process.on("SIGINT", onSig); } catch {}
     try { process.on("SIGTERM", onSig); } catch {}

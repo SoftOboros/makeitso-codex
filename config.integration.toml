@@ -1,0 +1,36 @@
+
+[project]
+name = "acme"
+root = "./"
+artifacts_dir = ".makeitso/artifacts"
+
+[manager]
+kind = "codex"
+approval = "delegate"
+budget_tokens = 1000
+
+[workers.codex]
+run_via = "api"
+profile = "default"
+delimiters = { start = "<<MIS:START>>", end = "<<MIS:END>>", json = "<<MIS:JSON>>", err = "<<MIS:ERR>>" }
+
+[policies]
+write_files = "auto"
+run_shell = "never"
+network = "auto"
+
+[telemetry]
+enabled = false
+redact = true
+store = "local"
+
+[learning]
+mode = "shadow"
+regex_repo = "./protocol/regexes.toml"
+prompt_repo = "./protocol/prompts/"
+replay_dir = ".makeitso/replays"
+
+[monitor]
+enabled = true
+stall_timeout_ms = 999999
+dangerous_regexes = ["Executing goal:"]

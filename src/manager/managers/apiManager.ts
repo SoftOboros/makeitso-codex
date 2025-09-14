@@ -17,7 +17,7 @@ export class ApiManager implements Manager {
   async plan(goal: string): Promise<Plan> {
     ConsoleLogger.note(`Manager(${this.model}) planning: budget ${this.ctx.budgetTokens}`);
     // If we have an API key, attempt an OpenAI API call to produce a plan in JSON
-    if (this.ctx.apiKey) {
+    if (this.ctx.apiKey && process.env.MIS_DISABLE_MANAGER_API !== "1") {
       try {
         const plan = await this.generatePlanViaOpenAI(goal);
         if (plan) return plan;

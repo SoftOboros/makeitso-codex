@@ -7,8 +7,6 @@ import { Manager, ManagerContext, ReviewInput, ManagerDecision } from "../index"
 import { Plan, Task } from "../../types";
 import { isAutoApprove, isAutoDeny, promptYesNo } from "../util";
 import { spawn } from "child_process";
-import fs from "fs";
-import path from "path";
 import { ConsoleLogger } from "../../console/logger";
 import { readBootstrapDoc, readRepoSummary, loadThreadSummary } from "../context";
 
@@ -19,23 +17,23 @@ export class CodexManager implements Manager {
   async plan(goal: string): Promise<Plan> {
     const via = (this.ctx.codexRunVia || "api").toLowerCase();
     ConsoleLogger.note(`Manager(codex via ${via}) planning: budget ${this.ctx.budgetTokens}`);
-    if (via === "api" && this.ctx.apiKey) {
+    if (via === "api" && this.ctx.apiKey && process.env.MIS_DISABLE_MANAGER_API !== "1") {
       try {
-        const plan = await this.generatePlanViaOpenAI(goal);
+        const plan = await generatePlanViaOpenAI(this.ctx, goal);
         if (plan) return plan;
       } catch (e: any) {
         ConsoleLogger.monitor(`Codex(api) planning failed: ${e?.message || String(e)}`);
       }
     } else if (via === "cli") {
       try {
-        const plan = await this.generatePlanViaCodexCLI(goal);
+        const plan = await generatePlanViaCodexCLI(this.ctx, goal);
         if (plan) return plan;
       } catch (e: any) {
         ConsoleLogger.monitor(`Codex(cli) planning failed: ${e?.message || String(e)}`);
       }
     }
     // Fallback minimal plan
-    return this.minimalPlan(goal);
+    return minimalPlan(this.ctx, goal);
   }
 
   /** @inheritdoc */
@@ -79,32 +77,32 @@ function safeParseFencedOrJson(text: string): any | undefined {
   try { return JSON.parse(raw); } catch { return undefined; }
 }
 
-private minimalPlan(goal: string): Plan {
+function minimalPlan(ctx: ManagerContext, goal: string): Plan {
   return {
     id: `plan_${Date.now()}`,
-    budgetTokens: this.ctx.budgetTokens,
+    budgetTokens: ctx.budgetTokens,
     tasks: [{
       id: "t1",
       goal,
       phases: [
-        { name: "bootstrap", approval: this.ctx.approval },
-        { name: "task", approval: this.ctx.approval },
-        { name: "verify", approval: this.ctx.approval },
-        { name: "summarize", approval: this.ctx.approval }
+        { name: "bootstrap", approval: ctx.approval },
+        { name: "task", approval: ctx.approval },
+        { name: "verify", approval: ctx.approval },
+        { name: "summarize", approval: ctx.approval }
       ]
     }]
   };
 }
 
-private async generatePlanViaOpenAI(goal: string): Promise<Plan | undefined> {
-  const model = this.ctx.codexModel || "gpt-4o-mini";
+async function generatePlanViaOpenAI(ctx: ManagerContext, goal: string): Promise<Plan | undefined> {
+  const model = ctx.codexModel || "gpt-4o-mini";
   const endpoint = "https://api.openai.com/v1/chat/completions";
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${this.ctx.apiKey}`,
+    Authorization: `Bearer ${ctx.apiKey}`,
     "Content-Type": "application/json",
   };
-  if (this.ctx.org) headers["OpenAI-Organization"] = this.ctx.org;
-  const system = buildPlanPrompt(goal, this.ctx.budgetTokens) +
+  if (ctx.org) headers["OpenAI-Organization"] = ctx.org;
+  const system = buildPlanPrompt(goal, ctx.budgetTokens) +
     `\n\nRepository summary (truncated):\n${readRepoSummary('.', 150)}\n\nThread summary (recent):\n${loadThreadSummary('.makeitso/sessions', 3, 600)}`;
   const body = {
     model,
@@ -120,22 +118,22 @@ private async generatePlanViaOpenAI(goal: string): Promise<Plan | undefined> {
   if (!parsed) return undefined;
   const plan = parsed as Plan;
   if (!plan?.tasks?.length) return undefined;
-  plan.budgetTokens = this.ctx.budgetTokens;
+  plan.budgetTokens = ctx.budgetTokens;
   for (const t of plan.tasks) {
-    for (const p of (t as any).phases || []) (p as any).approval = this.ctx.approval;
+    for (const p of (t as any).phases || []) (p as any).approval = ctx.approval;
   }
   return plan;
 }
 
-private async generatePlanViaCodexCLI(goal: string): Promise<Plan | undefined> {
+async function generatePlanViaCodexCLI(ctx: ManagerContext, goal: string): Promise<Plan | undefined> {
   return await new Promise<Plan | undefined>((resolve) => {
     const repoSummary = readRepoSummary(".", 200);
     const thread = loadThreadSummary('.makeitso/sessions', 3, 600);
-    const prompt = `${buildPlanPrompt(goal, this.ctx.budgetTokens)}\n\nRepository summary (read-only):\n${repoSummary}\n\nThread summary (recent):\n${thread}`;
+    const prompt = `${buildPlanPrompt(goal, ctx.budgetTokens)}\n\nRepository summary (read-only):\n${repoSummary}\n\nThread summary (recent):\n${thread}`;
     const env = { ...process.env } as any;
     // Inject API key for Codex CLI if available
-    if (this.ctx.apiKey) {
-      env.OPENAI_API_KEY = env.OPENAI_API_KEY || this.ctx.apiKey;
+    if (ctx.apiKey) {
+      env.OPENAI_API_KEY = env.OPENAI_API_KEY || ctx.apiKey;
     }
     // Avoid inheriting debugger flags to child
     delete env.NODE_OPTIONS;
@@ -152,11 +150,11 @@ private async generatePlanViaCodexCLI(goal: string): Promise<Plan | undefined> {
       try {
         const plan = parsed as Plan;
         if (!plan?.tasks?.length) { resolve(undefined); return; }
-        plan.budgetTokens = this.ctx.budgetTokens;
-        for (const t of plan.tasks) for (const p of (t as any).phases || []) (p as any).approval = this.ctx.approval;
+        plan.budgetTokens = ctx.budgetTokens;
+        for (const t of plan.tasks) for (const p of (t as any).phases || []) (p as any).approval = ctx.approval;
         resolve(plan);
       } catch { resolve(undefined); }
     });
-    proc.on("error", () => { try { clearTimeout(timer); } catch {}; resolve(undefined); });
+    proc.on("error", () => { try { clearTimeout(timer); } catch {} resolve(undefined); });
   });
 }
